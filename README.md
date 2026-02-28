@@ -115,6 +115,34 @@ ctest --output-on-failure
 
 ---
 
+## 发布流程（CD Release）
+
+推送一个符合 `v*.*.*` 格式的 Git tag 即可触发自动发布流程：
+
+```bash
+# 1. 确保本地 main 已是最新
+git checkout main
+git pull
+
+# 2. 创建版本 tag（语义化版本）
+git tag v1.0.0
+
+# 3. 推送 tag 到远端，触发 CD 工作流
+git push origin v1.0.0
+```
+
+工作流将自动完成：
+
+1. 在 `ubuntu-latest` 和 `windows-latest` 上构建并运行所有测试。
+2. 将 Linux 可执行文件打包为 `socket-demos-linux-v1.0.0.tar.gz`。
+3. 将 Windows 可执行文件打包为 `socket-demos-windows-v1.0.0.zip`。
+4. 在 GitHub Releases 页面创建对应版本的 Release，并上传两个资产。
+
+> **注意**：tag 格式必须严格匹配 `v<major>.<minor>.<patch>`（例如 `v1.0.0`、`v2.3.1`），
+> 其他格式不会触发发布流程。
+
+---
+
 ## 协议
 
 所有 demo 使用统一的**行式文本 echo 协议**：
