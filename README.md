@@ -23,29 +23,34 @@
 
 ```
 socket-demos/
-├── CMakeLists.txt          # 顶层构建文件
-├── cmake/                  # 公共 CMake 模块（预留）
+├── CMakeLists.txt              # 顶层构建文件
+├── cmake/                      # 公共 CMake 模块（预留）
 ├── windows/
-│   ├── 01_blocking_sync/
+│   ├── common/                 # Winsock 公共助手头文件
+│   │   └── winsock_helpers.h
+│   ├── 01_blocking_sync/       # server.c  client.c  README.md
 │   ├── 02_nonblocking_select_sync/
 │   └── 03_iocp_async/
 ├── linux/
-│   ├── 01_blocking_sync/
+│   ├── common/                 # Linux socket 公共助手头文件
+│   │   └── sock_helpers.h
+│   ├── 01_blocking_sync/       # server.c  client.c  README.md
 │   ├── 02_nonblocking_select_sync/
 │   └── 03_epoll/
 ├── tests/
-│   ├── unit/               # 单元测试
-│   └── integration/        # 集成测试（后续 PR 补全）
+│   ├── unit/                   # 单元测试（协议逻辑、write_all 等）
+│   └── integration/            # 集成测试（Linux：fork + exec）
 └── docs/
-    ├── protocol.md         # 应用层协议草案
-    └── architecture.md     # 整体架构草案
+    ├── protocol.md             # 应用层协议说明
+    ├── architecture.md         # 整体架构说明
+    └── verification.md         # 构建 / 运行 / 测试验证记录
 ```
 
 ---
 
 ## 构建命令
 
-### Linux / macOS
+### Linux
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -61,12 +66,45 @@ cmake --build build --config Release --parallel
 
 ---
 
+## 运行示例（以 Linux 01 为例）
+
+```bash
+# Terminal 1 — server
+./build/linux/01_blocking_sync/linux01_server
+# [server] listening on port 9001
+
+# Terminal 2 — client
+./build/linux/01_blocking_sync/linux01_client
+# [client] connected to 127.0.0.1:9001
+# [client] echo: hello
+# [client] echo: ping
+# [client] echo: bye
+# [client] done.
+```
+
+端口分配：
+
+| Demo | Port |
+|------|------|
+| `**/01_blocking_sync` | 9001 |
+| `**/02_nonblocking_select_sync` | 9002 |
+| `**/03_iocp_async` / `03_epoll` | 9003 |
+
+---
+
 ## 测试命令
 
 ```bash
 cd build
 ctest --output-on-failure
 ```
+
+测试项：
+- `placeholder_unit_test` — 基本算术和字符串断言
+- `unit_echo_helpers` — 协议 bye 检测、`write_all` 管道测试
+- `integration_echo` — 三个 Linux demo 的端到端 echo 验证（Linux 专用）
+
+详细验证结果见 [docs/verification.md](docs/verification.md)。
 
 ---
 
@@ -77,13 +115,13 @@ ctest --output-on-failure
 
 ---
 
-## 后续计划
+## 协议
 
-后续 PR 将逐步补全六个 socket 示例的完整业务逻辑：
+所有 demo 使用统一的**行式文本 echo 协议**：
 
-- [ ] PR-2：`linux/01_blocking_sync` 完整实现
-- [ ] PR-3：`linux/02_nonblocking_select_sync` 完整实现
-- [ ] PR-4：`linux/03_epoll` 完整实现
-- [ ] PR-5：`windows/01_blocking_sync` 完整实现
-- [ ] PR-6：`windows/02_nonblocking_select_sync` 完整实现
-- [ ] PR-7：`windows/03_iocp_async` 完整实现
+- 客户端发送一行文本（以 `\n` 结尾）
+- 服务端原样回显
+- 客户端发送 `bye\n` 触发连接关闭
+
+详见 [docs/protocol.md](docs/protocol.md)。
+
